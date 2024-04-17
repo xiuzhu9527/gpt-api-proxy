@@ -1,4 +1,5 @@
 {
+    "devCommand": "python src/main.py",
     "builds": [
         {
             "src": "src/main.py",
