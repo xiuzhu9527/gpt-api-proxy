@@ -21,7 +21,7 @@ BASE_URL = "https://chat.openai.com"
 CHAT_URL = f"{BASE_URL}/backend-anon/conversation"
 SESSION_URL = f"{BASE_URL}/backend-anon/sentinel/chat-requirements"
 
-REFRESH_INTERVAL = int(os.environ.get('REFRESH_INTERVAL'))
+REFRESH_INTERVAL = int(os.environ.get('REFRESH_INTERVAL', 60))
 
 app = FastAPI()
 
@@ -106,7 +106,7 @@ def get_base_headers():
 
 def get_proxy_info():
     proxy = {}
-    enable = os.environ.get('PROXY_ENABLE')
+    enable = os.environ.get('PROXY_ENABLE', 'false')
     if enable and enable.upper() == 'TRUE':
         proxy_host = os.environ.get('PROXY_HOST')
         proxy_port = os.environ.get('PROXY_PORT')
