@@ -7,7 +7,6 @@ import uuid
 import requests
 
 from fastapi import FastAPI, Request
-from fastapi import APIRouter
 from dotenv import load_dotenv
 from starlette.responses import StreamingResponse
 
@@ -25,7 +24,6 @@ SESSION_URL = f"{BASE_URL}/backend-anon/sentinel/chat-requirements"
 REFRESH_INTERVAL = int(os.environ.get('REFRESH_INTERVAL'))
 
 app = FastAPI()
-router = APIRouter(prefix='/v1')
 
 token_tuple = (None, 0)
 
@@ -34,7 +32,8 @@ token_tuple = (None, 0)
 async def application():
     return "I'm GPT API Proxy"
 
-@router.post('/chat/completions')
+
+@app.post('/v1/chat/completions')
 async def chat_completion(req: Request):
     headers = get_base_headers()
     proxy = get_proxy_info()
