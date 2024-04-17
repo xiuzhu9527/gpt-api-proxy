@@ -1,9 +1,9 @@
 
 import os
+import sys
 import time
 import uuid
 
-import uvicorn
 import requests
 
 from fastapi import FastAPI, Request
@@ -11,7 +11,9 @@ from fastapi import APIRouter
 from dotenv import load_dotenv
 from starlette.responses import StreamingResponse
 
-import chatgpt_adapter
+sys.path.append(".")
+sys.path.append("..")
+from src import chatgpt_adapter
 
 load_dotenv()
 
@@ -27,6 +29,10 @@ router = APIRouter(prefix='/v1')
 
 token_tuple = (None, 0)
 
+
+@app.get('/')
+async def application():
+    return "I'm GPT API Proxy"
 
 @router.post('/chat/completions')
 async def chat_completion(req: Request):
