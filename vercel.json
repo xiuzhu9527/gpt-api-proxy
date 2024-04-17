@@ -1,5 +1,5 @@
 {
-    "devCommand": "python src/main.py",
+    "devCommand": "sh build/init_config.sh && python src/main.py",
     "builds": [
         {
             "src": "src/main.py",
