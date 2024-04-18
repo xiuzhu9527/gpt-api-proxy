@@ -33,18 +33,53 @@ async def application():
     return "I'm GPT API Proxy"
 
 
+@app.post('/v1/completions')
+async def completion(req: Request):
+    headers = get_base_headers()
+    proxy = get_proxy_info()
+    await refresh_chat_token(headers, proxy)
+    headers['Openai-Sentinel-Chat-Requirements-Token'] = token_tuple[0]
+
+    request_body = await req.json()
+    prompt = request_body['prompt']
+
+    prompts = []
+    if isinstance(prompt, str):
+        prompts.append(prompt)
+    elif isinstance(prompt, list):
+        prompts.extend(prompt)
+
+    messages = []
+    for p in prompts:
+        msg_temp = {
+            "author": {"role": "user"},
+            "content": {"content_type": "text", "parts": [p]}
+        }
+        messages.append(msg_temp)
+
+    body = {
+        "action": "next",
+        "messages": messages,
+        "parent_message_id": str(uuid.uuid4()),
+        "model": "text-davinci-002-render-sha",
+        "timezone_offset_min": -180,
+        "suggestions": [],
+        "history_and_training_disabled": True,
+        "conversation_mode": {"kind": "primary_assistant"},
+        "websocket_request_id": str(uuid.uuid4())
+    }
+
+    is_stream = request_body.get('stream')
+    response = post_request(CHAT_URL, json=body, headers=headers, proxies=proxy)
+    return openai_data_format(response, is_stream)
+
+
 @app.post('/v1/chat/completions')
 async def chat_completion(req: Request):
     headers = get_base_headers()
     proxy = get_proxy_info()
 
-    global token_tuple
-    # get and refresh chat token
-    cur_time = int(time.time())
-    if cur_time - token_tuple[1] > REFRESH_INTERVAL:
-        res = requests.post(SESSION_URL, data={}, headers=headers, proxies=proxy)
-        token = res.json()['token']
-        token_tuple = (token, cur_time)
+    await refresh_chat_token(headers, proxy)
     headers['Openai-Sentinel-Chat-Requirements-Token'] = token_tuple[0]
 
     request_body = await req.json()
@@ -67,16 +102,44 @@ async def chat_completion(req: Request):
         "websocket_request_id": str(uuid.uuid4())
     }
 
-    response = requests.post(CHAT_URL, json=body, headers=headers, proxies=proxy)
-    if request_body.get('stream'):
+    is_stream = request_body.get('stream')
+    response = post_request(CHAT_URL, json=body, headers=headers, proxies=proxy)
+    return openai_data_format(response, is_stream, is_chat=True)
+
+
+async def refresh_chat_token(headers, proxy):
+    global token_tuple
+    # get and refresh chat token
+    cur_time = int(time.time())
+    if cur_time - token_tuple[1] > REFRESH_INTERVAL:
+        res = post_request(SESSION_URL, data={}, headers=headers, proxies=proxy)
+        token = res.json()['token']
+        token_tuple = (token, cur_time)
+
+
+def post_request(url, data=None, headers=None, proxies=None, **kwargs):
+    response = requests.post(url, data=data, headers=headers, proxies=proxies, **kwargs)
+    response.raise_for_status()
+    return response
+
+
+def openai_data_format(response, is_stream=False, is_chat=False):
+    if is_stream:
         media_type = "text/event-stream"
         res_headers = {"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        if is_chat:
+            async_iter = chatgpt_adapter.to_openai_chat_async_iterator(response.iter_lines())
+        else:
+            async_iter = chatgpt_adapter.to_openai_async_iterator(response.iter_lines())
         return StreamingResponse(
-            chatgpt_adapter.to_openai_async_iterator(response.iter_lines()),
+            async_iter,
             media_type=media_type,
             headers=res_headers)
     else:
-        content = chatgpt_adapter.to_openai_nostream_content(response.iter_lines())
+        if is_chat:
+            content = chatgpt_adapter.to_openai_chat_nostream_content(response.iter_lines())
+        else:
+            content = chatgpt_adapter.to_openai_nostream_content(response.iter_lines())
         return content
 
 
