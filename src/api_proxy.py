@@ -2,7 +2,7 @@
 import os
 import sys
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, HTTPException
 from dotenv import load_dotenv
 
 sys.path.append(".")
@@ -54,7 +54,7 @@ async def completion(req: Request):
         return await reverse_instance.do_run(messages, is_stream=is_stream)
     except Exception as e:
         error_msg = f"error: {str(e)}"
-        return Response(status_code=1004, content=error_msg)
+        raise HTTPException(status_code=1004, detail=error_msg)
 
 
 @app.post('/v1/chat/completions')
@@ -75,7 +75,7 @@ async def chat_completion(req: Request):
         return await reverse_instance.do_run(messages, is_stream=is_stream, is_chat=True)
     except Exception as e:
         error_msg = f"error: {str(e)}"
-        return Response(status_code=1004, content=error_msg)
+        raise HTTPException(status_code=1004, detail=error_msg)
 
 
 def get_reverse_by_model(model: str):
