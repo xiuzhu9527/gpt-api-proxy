@@ -1,6 +1,7 @@
 
 import os
 import sys
+import logging
 
 from fastapi import FastAPI, Request, HTTPException
 from dotenv import load_dotenv
@@ -8,6 +9,8 @@ from dotenv import load_dotenv
 sys.path.append(".")
 sys.path.append("..")
 from src.reverse.base_reverse import BaseReverse
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -54,6 +57,8 @@ async def completion(req: Request):
         return await reverse_instance.do_run(messages, is_stream=is_stream)
     except Exception as e:
         error_msg = f"error: {str(e)}"
+        logger.error(error_msg)
+        print("print: " + error_msg)
         raise HTTPException(status_code=1004, detail=error_msg)
 
 
@@ -75,6 +80,8 @@ async def chat_completion(req: Request):
         return await reverse_instance.do_run(messages, is_stream=is_stream, is_chat=True)
     except Exception as e:
         error_msg = f"error: {str(e)}"
+        logger.error(error_msg)
+        print("print: " + error_msg)
         raise HTTPException(status_code=1004, detail=error_msg)
 
 
